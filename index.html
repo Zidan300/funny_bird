@@ -110,8 +110,15 @@
     <button class="target-button" data-target="65">65</button>
 </div>
 
+<div id="killsCounter" style="position: absolute; top: 15px; left: 20px; font-size: 26px; font-weight: bold; color: #fff; text-shadow: 0 0 8px #4d94ff; z-index: 11; user-select: none; display: none;">
+    Kills: 0
+</div>
 <div id="countdownTimer">30</div>
 <div id="resultText">GAY</div>
+
+<button id="restartButton" style="display:none; position:absolute; left:50%; top:65%; transform:translate(-50%, -50%); background:#4d94ff; color:white; font-size:22px; font-weight:bold; border:none; border-radius:10px; padding:14px 40px; z-index:30; cursor:pointer; box-shadow:0 4px 20px #000a;">
+    Restart
+</button>
 
 <script>
 /**
@@ -505,6 +512,8 @@ for(let i = 0; i < 3; i++) {
 const gameMenu = document.getElementById('gameMenu');
 const countdownTimer = document.getElementById('countdownTimer');
 const resultText = document.getElementById('resultText');
+const killsCounter = document.getElementById('killsCounter');
+const restartButton = document.getElementById('restartButton');
 
 let gameStarted = false;
 let gameDuration = 30; // seconds
@@ -559,6 +568,9 @@ function startGame(target) {
     gameMenu.style.display = 'none';
     countdownTimer.style.display = 'block';
     resultText.style.display = 'none';
+    killsCounter.style.display = 'block';
+    killsCounter.textContent = `Kills: 0`;
+    restartButton.style.display = 'none';
     congregationParticles = [];
 
     // Play scream sound at start
@@ -590,6 +602,8 @@ function startGame(target) {
 function endGame() {
     animationActive = false;
     countdownTimer.style.display = 'none';
+    killsCounter.style.display = 'block';
+    restartButton.style.display = 'block';
 
     if(kills >= killTarget) {
         // Show congregation animation
@@ -611,7 +625,7 @@ function startCongregationAnimation() {
     setTimeout(() => {
         congregationAnimationActive = false;
         congregationParticles = [];
-        gameMenu.style.display = 'block'; // Show menu again for replay
+        // Don't show menu here; handled by restart button
     }, 5000);
 }
 
@@ -642,6 +656,7 @@ function animate() {
             if (mosquito.alive && distance < cfg.eagleScale * 0.2) {
                 mosquito.kill();
                 kills++;
+                killsCounter.textContent = `Kills: ${kills}`;
                 // Play scream on kill already handled in kill()
             }
         });
@@ -689,6 +704,14 @@ buttons.forEach(button => {
         const target = parseInt(button.getAttribute('data-target'));
         startGame(target);
     });
+});
+
+// Restart button logic
+restartButton.addEventListener('click', () => {
+    restartButton.style.display = 'none';
+    killsCounter.style.display = 'none';
+    resultText.style.display = 'none';
+    gameMenu.style.display = 'block';
 });
 </script>
 </body>
