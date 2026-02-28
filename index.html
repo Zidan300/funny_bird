@@ -278,13 +278,98 @@ class SkeletalEagle {
 const eagle = new SkeletalEagle();
 const particles = Array.from({ length: cfg.particleCount }, () => new Particle());
 
+// Mosquito System
+const mosquitoImg = new Image();
+mosquitoImg.src = "musquito.png";
+
+class Mosquito {
+    constructor() {
+        this.reset();
+    }
+
+    reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height * 0.6;
+        this.opacity = 1;
+        this.alive = true;
+        this.falling = false;
+        this.vy = 0;
+        this.rotation = 0;
+        this.size = cfg.eagleScale * 0.45;   // Bigger mosquito
+    }
+
+    update() {
+        if (this.alive) {
+            // fade out naturally
+            this.opacity -= 0.008;   // Stay visible longer before fading
+            if (this.opacity <= 0) {
+                this.reset();
+            }
+        } else if (this.falling) {
+            // falling animation when killed
+            this.vy += 0.4;
+            this.y += this.vy;
+            this.rotation += 0.2;
+
+            if (this.y > height + this.size) {
+                this.reset();
+            }
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.drawImage(
+            mosquitoImg,
+            -this.size / 2,
+            -this.size / 2,
+            this.size,
+            this.size
+        );
+        ctx.restore();
+        ctx.globalAlpha = 1;
+    }
+
+    kill() {
+        this.alive = false;
+        this.falling = true;
+        this.opacity = 1;
+        this.rotation = Math.PI; // upside down
+        this.vy = 2;
+    }
+}
+
+const mosquito = new Mosquito();
+
+setInterval(() => {
+    if (!mosquito.falling) {
+        mosquito.reset();
+    }
+}, 3000);   // Appear less frequently and stay longer
+
 function animate() {
     ctx.clearRect(0, 0, width, height);
     
     particles.forEach(p => p.draw());
+
+    mosquito.update();
+    mosquito.draw();
     
     eagle.update();
     eagle.draw();
+
+    // Collision detection with eagle head
+    const head = eagle.spine[0];
+    const dx = head.x - mosquito.x;
+    const dy = head.y - mosquito.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (mosquito.alive && distance < cfg.eagleScale * 0.2) {
+        mosquito.kill();
+    }
 
     requestAnimationFrame(animate);
 }
