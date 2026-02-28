@@ -291,23 +291,11 @@ screamSound.addEventListener('error', (e) => {
     console.error('Sound failed to load. Check file path for scream.mp3');
 });
 
-// Proper audio unlock using user gesture
-let userInteracted = false;
-window.addEventListener('mousedown', () => {
-    if (!userInteracted) {
-        screamSound.muted = true;
-        screamSound.play().then(() => {
-            screamSound.pause();
-            screamSound.currentTime = 0;
-            screamSound.muted = false;
-            userInteracted = true;
-        }).catch(() => {});
-    }
-});
 
 class Mosquito {
     constructor() {
         this.reset();
+        this.setRespawnTimeout();
     }
 
     reset() {
@@ -320,6 +308,24 @@ class Mosquito {
         this.rotation = 0;
         this.size = cfg.eagleScale * 0.45;
         this.deadTimer = 0; // time to stay on ground
+        this.clearRespawnTimeout();
+        this.setRespawnTimeout();
+    }
+
+    setRespawnTimeout() {
+        this.respawnTimeout = setTimeout(() => {
+            if (!this.falling) {
+                this.reset();
+            }
+            this.setRespawnTimeout();
+        }, 1000 + Math.random() * 2000);
+    }
+
+    clearRespawnTimeout() {
+        if (this.respawnTimeout) {
+            clearTimeout(this.respawnTimeout);
+            this.respawnTimeout = null;
+        }
     }
 
     update() {
@@ -374,41 +380,40 @@ class Mosquito {
         this.rotation = Math.PI; // fixed upside down
         this.vy = 2;
 
-        if (userInteracted) {
-            screamSound.currentTime = 0;
-            screamSound.play();
-        }
+        screamSound.currentTime = 0;
+        screamSound.play();
     }
 }
 
-const mosquito = new Mosquito();
-
-setInterval(() => {
-    if (!mosquito.falling) {
-        mosquito.reset();
-    }
-}, 3000);   // Appear less frequently and stay longer
+const mosquitoes = [];
+for(let i = 0; i < 3; i++) {
+    mosquitoes.push(new Mosquito());
+}
 
 function animate() {
     ctx.clearRect(0, 0, width, height);
     
     particles.forEach(p => p.draw());
 
-    mosquito.update();
-    mosquito.draw();
+    mosquitoes.forEach(mosquito => {
+        mosquito.update();
+        mosquito.draw();
+    });
     
     eagle.update();
     eagle.draw();
 
-    // Collision detection with eagle head
+    // Collision detection with eagle head for each mosquito
     const head = eagle.spine[0];
-    const dx = head.x - mosquito.x;
-    const dy = head.y - mosquito.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    mosquitoes.forEach(mosquito => {
+        const dx = head.x - mosquito.x;
+        const dy = head.y - mosquito.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (mosquito.alive && distance < cfg.eagleScale * 0.2) {
-        mosquito.kill();
-    }
+        if (mosquito.alive && distance < cfg.eagleScale * 0.2) {
+            mosquito.kill();
+        }
+    });
 
     requestAnimationFrame(animate);
 }
