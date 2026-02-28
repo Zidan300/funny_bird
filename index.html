@@ -90,8 +90,8 @@
             transform: translate(-50%, -50%);
             font-size: 96px;
             font-weight: bold;
-            color: #ff1a1a;
-            text-shadow: 0 0 20px #ff1a1a;
+            color: #FFD700; /* Default to gold, overridden in JS */
+            text-shadow: 0 0 20px #FFD700; /* Default, overridden in JS */
             z-index: 20;
             user-select: none;
             display: none;
@@ -105,9 +105,9 @@
 
 <div id="gameMenu">
     <h2>Choose Mosquito Kill Target</h2>
-    <button class="target-button" data-target="35">35</button>
-    <button class="target-button" data-target="50">50</button>
-    <button class="target-button" data-target="65">65</button>
+    <button class="target-button" data-target="30">30</button>
+    <button class="target-button" data-target="45">45</button>
+    <button class="target-button" data-target="60">60</button>
 </div>
 
 <div id="killsCounter" style="position: absolute; top: 15px; left: 20px; font-size: 26px; font-weight: bold; color: #fff; text-shadow: 0 0 8px #4d94ff; z-index: 11; user-select: none; display: none;">
@@ -609,11 +609,20 @@ function endGame() {
     restartButton.style.display = 'block';
 
     if(kills >= killTarget) {
-        // Show congregation animation
+        // Show "NOT GAY" text and congregation animation together
+        resultText.textContent = 'NOT GAY';
+        resultText.style.display = 'block';
+        // Set gold color and glow for success
+        resultText.style.color = '#FFD700';
+        resultText.style.textShadow = '0 0 20px #FFD700';
         startCongregationAnimation();
     } else {
         // Show "GAY" text
+        resultText.textContent = 'GAY';
         resultText.style.display = 'block';
+        // Set red color and glow for failure
+        resultText.style.color = '#ff1a1a';
+        resultText.style.textShadow = '0 0 32px #ff1a1a, 0 0 64px #ff1a1a';
     }
 }
 
@@ -623,7 +632,7 @@ function startCongregationAnimation() {
         congregationParticles.push(new CongregationParticle());
     }
     // Show for 5 seconds then hide
-    resultText.style.display = 'none';
+    // resultText.style.display = 'none'; // Remove hiding so text remains visible
     congregationAnimationActive = true;
     setTimeout(() => {
         congregationAnimationActive = false;
