@@ -359,12 +359,12 @@ class SkeletalEagle {
 const eagle = new SkeletalEagle();
 const particles = Array.from({ length: cfg.particleCount }, () => new Particle());
 
-// Mosquito System
+// Mosquito System (Integrated Version)
 const mosquitoImg = new Image();
 mosquitoImg.src = "musquito.png";
 
 const screamSound = new Audio();
-screamSound.src = "./scream.mp3"; // your local file in same folder
+screamSound.src = "./scream.mp3";
 screamSound.preload = "auto";
 screamSound.load();
 screamSound.volume = 0.7;
@@ -419,7 +419,7 @@ class Mosquito {
         this.vy = 0;
         this.rotation = 0;
         this.size = cfg.eagleScale * 0.45;
-        this.deadTimer = 0; // time to stay on ground
+        this.deadTimer = 0;
         this.clearRespawnTimeout();
         this.setRespawnTimeout();
     }
@@ -447,20 +447,15 @@ class Mosquito {
                 this.reset();
             }
         } else if (this.falling) {
-
-            // smoother gravity
             this.vy += 0.25;
             this.y += this.vy;
-
-            // Stop at bottom and stay visible upside down
             if (this.y >= height - this.size / 2) {
                 this.y = height - this.size / 2;
                 this.vy = 0;
                 this.falling = false;
-                this.deadTimer = 120; // stay for ~2 seconds at 60fps
+                this.deadTimer = 120;
             }
         } else {
-            // Dead on ground, count down
             if (this.deadTimer > 0) {
                 this.deadTimer--;
             } else {
@@ -474,6 +469,7 @@ class Mosquito {
         ctx.globalAlpha = this.opacity;
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
+        // Draw mosquito image
         ctx.drawImage(
             mosquitoImg,
             -this.size / 2,
@@ -481,6 +477,15 @@ class Mosquito {
             this.size,
             this.size
         );
+        // Draw glow effect
+        ctx.globalAlpha = this.opacity * 0.5;
+        ctx.shadowColor = "#ffeb3b";
+        ctx.shadowBlur = 24;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size * 0.65, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,80,0.15)";
+        ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.restore();
         ctx.globalAlpha = 1;
     }
@@ -489,14 +494,12 @@ class Mosquito {
         this.alive = false;
         this.falling = true;
         this.opacity = 1;
-        this.rotation = Math.PI; // fixed upside down
+        this.rotation = Math.PI;
         this.vy = 2;
-
         screamSound.currentTime = 0;
         screamSound.play();
-
-        // Spawn blood particles at mosquito location
-        const bloodCount = 20;
+        // Spawn more blood particles at mosquito location
+        const bloodCount = 35;
         for(let i = 0; i < bloodCount; i++) {
             bloodParticles.push(new BloodParticle(this.x, this.y));
         }
@@ -504,7 +507,7 @@ class Mosquito {
 }
 
 const mosquitoes = [];
-for(let i = 0; i < 3; i++) {
+for(let i = 0; i < 7; i++) {
     mosquitoes.push(new Mosquito());
 }
 
