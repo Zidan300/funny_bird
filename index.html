@@ -282,6 +282,29 @@ const particles = Array.from({ length: cfg.particleCount }, () => new Particle()
 const mosquitoImg = new Image();
 mosquitoImg.src = "musquito.png";
 
+const screamSound = new Audio();
+screamSound.src = "./scream.mp3"; // your local file in same folder
+screamSound.preload = "auto";
+screamSound.load();
+screamSound.volume = 0.7;
+screamSound.addEventListener('error', (e) => {
+    console.error('Sound failed to load. Check file path for scream.mp3');
+});
+
+// Proper audio unlock using user gesture
+let userInteracted = false;
+window.addEventListener('mousedown', () => {
+    if (!userInteracted) {
+        screamSound.muted = true;
+        screamSound.play().then(() => {
+            screamSound.pause();
+            screamSound.currentTime = 0;
+            screamSound.muted = false;
+            userInteracted = true;
+        }).catch(() => {});
+    }
+});
+
 class Mosquito {
     constructor() {
         this.reset();
@@ -295,23 +318,34 @@ class Mosquito {
         this.falling = false;
         this.vy = 0;
         this.rotation = 0;
-        this.size = cfg.eagleScale * 0.45;   // Bigger mosquito
+        this.size = cfg.eagleScale * 0.45;
+        this.deadTimer = 0; // time to stay on ground
     }
 
     update() {
         if (this.alive) {
-            // fade out naturally
-            this.opacity -= 0.008;   // Stay visible longer before fading
+            this.opacity -= 0.008;
             if (this.opacity <= 0) {
                 this.reset();
             }
         } else if (this.falling) {
-            // falling animation when killed
-            this.vy += 0.4;
-            this.y += this.vy;
-            this.rotation += 0.2;
 
-            if (this.y > height + this.size) {
+            // smoother gravity
+            this.vy += 0.25;
+            this.y += this.vy;
+
+            // Stop at bottom and stay visible upside down
+            if (this.y >= height - this.size / 2) {
+                this.y = height - this.size / 2;
+                this.vy = 0;
+                this.falling = false;
+                this.deadTimer = 120; // stay for ~2 seconds at 60fps
+            }
+        } else {
+            // Dead on ground, count down
+            if (this.deadTimer > 0) {
+                this.deadTimer--;
+            } else {
                 this.reset();
             }
         }
@@ -337,8 +371,13 @@ class Mosquito {
         this.alive = false;
         this.falling = true;
         this.opacity = 1;
-        this.rotation = Math.PI; // upside down
+        this.rotation = Math.PI; // fixed upside down
         this.vy = 2;
+
+        if (userInteracted) {
+            screamSound.currentTime = 0;
+            screamSound.play();
+        }
     }
 }
 
