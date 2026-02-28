@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skeletal Eagle Cursor</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, #0a1128 0%, #000 100%);
+        }
+
+        /* Cinematic Moon Background */
+        .moon {
+            position: absolute;
+            top: 10%;
+            right: 15%;
+            width: 100px;
+            height: 100px;
+            background: #e0e6ed;
+            border-radius: 50%;
+            box-shadow: 0 0 50px 10px rgba(130, 170, 255, 0.2);
+            z-index: 0;
+        }
+
+        canvas {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="moon"></div>
+<canvas id="canvas"></canvas>
+
+<script>
+/**
+ * SKELETAL EAGLE ANIMATION
+ * Inspired by the Dragon Cursor Effect
+ * Re-engineered for Raptor Anatomy & 60FPS Canvas Performance
+ */
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+const pointer = { x: 0, y: 0, active: false };
+let idleTime = 0;
+let frame = 0;
+
+// Configuration
+const cfg = {
+    boneColor: '#ffffff',
+    glowColor: '#4d94ff',
+    segments: 12,      // Number of spine segments
+    segmentDistRatio: 0.012,   // Distance between spine segments relative to canvas width
+    eagleScaleRatio: 0.07,     // Scale relative to canvas width
+    particleCount: 30
+};
+
+function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    cfg.segmentDist = width * cfg.segmentDistRatio;
+    cfg.eagleScale = width * cfg.eagleScaleRatio;
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('mousemove', e => {
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+    pointer.active = true;
+    idleTime = 0;
+});
+
+resize();
+
+// Initial position
+pointer.x = width / 2;
+pointer.y = height / 2;
+
+class Particle {
+    constructor() { this.reset(); }
+    reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.life = Math.random() * 1;
+    }
+    draw() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.002;
+        if (this.life <= 0) this.reset();
+        ctx.fillStyle = `rgba(150, 200, 255, ${this.life})`;
+        ctx.fillRect(this.x, this.y, 1.5, 1.5);
+    }
+}
+
+class SpineSegment {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.angle = 0;
+        this.tailRotation = 0; // For dynamic tail rotation
+    }
+}
+
+class SkeletalEagle {
+    constructor() {
+        this.spine = [];
+        for (let i = 0; i < cfg.segments; i++) {
+            this.spine.push(new SpineSegment(pointer.x, pointer.y));
+        }
+        this.flap = 0;
+    }
+
+    drawBone(x1, y1, x2, y2, thickness, glow = true) {
+        ctx.beginPath();
+        ctx.lineWidth = thickness;
+        ctx.strokeStyle = cfg.boneColor;
+        ctx.lineCap = 'round';
+        if (glow) {
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = cfg.glowColor;
+        } else {
+            ctx.shadowBlur = 7;
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+        }
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+
+    drawWing(x, y, angle, side, flap) {
+        const dir = side === 'left' ? -1 : 1;
+        const scale = cfg.eagleScale;
+
+        // Shoulder to Elbow (Humerus)
+        const elbowAngle = angle + (Math.sin(flap) * 0.5 * dir);
+        const ex = x + Math.cos(elbowAngle - (Math.PI/2 * dir)) * scale * 0.7;
+        const ey = y + Math.sin(elbowAngle - (Math.PI/2 * dir)) * scale * 0.7;
+
+        // Elbow to Wrist (Ulna/Radius)
+        const wristAngle = elbowAngle + (Math.sin(flap - 0.7) * 0.8 * dir);
+        const wx = ex + Math.cos(wristAngle - (Math.PI/2 * dir)) * scale * 0.8;
+        const wy = ey + Math.sin(wristAngle - (Math.PI/2 * dir)) * scale * 0.8;
+
+        // Draw wing bones
+        this.drawBone(x, y, ex, ey, 5);
+        this.drawBone(ex, ey, wx, wy, 3.5);
+
+        // Primary feathers (Finger bones)
+        for (let i = 0; i < 7; i++) {
+            const fAngle = wristAngle + (i * 0.2 - 0.6) * dir;
+            const fLen = scale * (1.1 - (i * 0.1));
+            const fx = wx + Math.cos(fAngle - (Math.PI/2 * dir)) * fLen;
+            const fy = wy + Math.sin(fAngle - (Math.PI/2 * dir)) * fLen;
+            this.drawBone(wx, wy, fx, fy, 1);
+        }
+    }
+
+    update() {
+        frame += 0.015;
+        
+        // Idle motion: Circle around screen if mouse is still
+        let targetX = pointer.x;
+        let targetY = pointer.y;
+
+        if (!pointer.active) {
+            targetX = width/2 + Math.cos(frame * 0.5) * (width/3);
+            targetY = height/2 + Math.sin(frame * 0.3) * (height/4);
+        }
+
+        // Leading head - increase follow speed for more immediate response
+        const head = this.spine[0];
+        head.x += (targetX - head.x) * 0.15;
+        head.y += (targetY - head.y) * 0.15;
+
+        // Spine segments following logic
+        for (let i = 1; i < this.spine.length; i++) {
+            const s = this.spine[i];
+            const prev = this.spine[i - 1];
+            
+            const dx = prev.x - s.x;
+            const dy = prev.y - s.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            s.angle = Math.atan2(dy, dx);
+
+            if (dist > cfg.segmentDist) {
+                s.x = prev.x - Math.cos(s.angle) * cfg.segmentDist;
+                s.y = prev.y - Math.sin(s.angle) * cfg.segmentDist;
+            }
+        }
+
+        // Dynamic tail rotation independent from spine angle for lifelike flow
+        const tailStart = this.spine.length - 5;
+        for(let i = tailStart; i < this.spine.length; i++) {
+            const s = this.spine[i];
+            s.tailRotation = Math.sin(frame * 2 + i) * 0.3;
+        }
+
+        this.flap += 0.08; // Smoother flap speed
+    }
+
+    draw() {
+        const head = this.spine[0];
+        const shoulder = this.spine[1];
+        const angle = Math.atan2(shoulder.y - head.y, shoulder.x - head.x);
+
+        // Draw Shadow for depth
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(head.x, head.y + cfg.eagleScale * 1.2, cfg.eagleScale * 0.85, cfg.eagleScale * 0.28, angle, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 1. Draw Tail (Back segments) with dynamic rotation
+        const tailIdx = this.spine.length - 1;
+        const tailBase = this.spine[tailIdx];
+        for(let i = -1; i <= 1; i++) {
+            const tSegment = this.spine[tailIdx];
+            const tAngle = tSegment.angle + tSegment.tailRotation + (i * 0.4);
+            const tx = tailBase.x - Math.cos(tAngle) * (cfg.eagleScale * 0.55);
+            const ty = tailBase.y - Math.sin(tAngle) * (cfg.eagleScale * 0.55);
+            this.drawBone(tailBase.x, tailBase.y, tx, ty, 1.8);
+        }
+
+        // 2. Draw Wings (Attached to the second segment/shoulder)
+        this.drawWing(shoulder.x, shoulder.y, shoulder.angle, 'left', this.flap);
+        this.drawWing(shoulder.x, shoulder.y, shoulder.angle, 'right', this.flap);
+
+        // 3. Draw Ribcage/Spine
+        for (let i = 0; i < this.spine.length - 1; i++) {
+            const s = this.spine[i];
+            const next = this.spine[i+1];
+            this.drawBone(s.x, s.y, next.x, next.y, 7 - (i * 0.5));
+            
+            // Ribs on the first few segments
+            if (i > 1 && i < 6) {
+                const rAngle = s.angle + Math.PI/2;
+                const rLen = (cfg.eagleScale * 0.22) - i * 1.8;
+                this.drawBone(s.x, s.y, s.x + Math.cos(rAngle)*rLen, s.y + Math.sin(rAngle)*rLen, 2.5, false);
+                this.drawBone(s.x, s.y, s.x - Math.cos(rAngle)*rLen, s.y - Math.sin(rAngle)*rLen, 2.5, false);
+            }
+        }
+
+        // 4. Draw Head/Skull
+        ctx.save();
+        ctx.translate(head.x, head.y);
+        ctx.rotate(head.angle);
+        
+        // Skull base
+        ctx.fillStyle = cfg.boneColor;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = cfg.glowColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, cfg.eagleScale * 0.11, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Beak (Characteristic Eagle Hook)
+        ctx.beginPath();
+        ctx.moveTo(cfg.eagleScale * 0.11, -cfg.eagleScale * 0.028);
+        ctx.quadraticCurveTo(cfg.eagleScale * 0.25, -cfg.eagleScale * 0.028, cfg.eagleScale * 0.28, cfg.eagleScale * 0.055);
+        ctx.lineTo(cfg.eagleScale * 0.17, cfg.eagleScale * 0.055);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+const eagle = new SkeletalEagle();
+const particles = Array.from({ length: cfg.particleCount }, () => new Particle());
+
+function animate() {
+    ctx.clearRect(0, 0, width, height);
+    
+    particles.forEach(p => p.draw());
+    
+    eagle.update();
+    eagle.draw();
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
